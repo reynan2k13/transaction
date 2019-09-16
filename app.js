@@ -62,7 +62,6 @@ calculate = (users) => {
 			switch(users[x].type){
 				case 'cash_in':
 					commission = users[x].operation.amount * cashIn.percents / 100;
-					console.log("aaaaaaaaaaaaaaaa", commission)
 					commission < cashIn.max.amount ? users[x].commission = commission : users[x].commission = cashIn.max.amount;
 
 					break;
