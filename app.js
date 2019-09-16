@@ -61,8 +61,10 @@ calculate = (users) => {
 		for(let x = 0; x<users.length;x++){
 			switch(users[x].type){
 				case 'cash_in':
-					commission = users[x].operation.amount * cashIn.max.amount / 100;
+					commission = users[x].operation.amount * cashIn.percents / 100;
+					console.log("aaaaaaaaaaaaaaaa", commission)
 					commission < cashIn.max.amount ? users[x].commission = commission : users[x].commission = cashIn.max.amount;
+
 					break;
 				case 'cash_out':
 					if(users[x].user_type === 'natural'){
