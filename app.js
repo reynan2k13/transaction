@@ -48,11 +48,53 @@ fs.readFile(jsonData , (err, data) => {
 var arrayUser = []; //tmp storage for comparing
 
 // add week monday to sunday
-getweek = (params) => {
-    const today = new Date(params);
-    const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
-    const pastDaysOfYear = (today - firstDayOfYear) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) /8);
+getWeek = (params) => {
+	let week = [];
+	let curr = new Date(params);
+	let first;
+	for (let i = 1; i <= 7; i++) {
+		
+		if(curr.getDay() === 0){
+			first = curr.getDate() - 7 + i;
+		}else{
+			first = curr.getDate() - curr.getDay() + i ;
+		}
+		let day = new Date(curr.setDate(first)).toISOString().slice(0, 10)
+		week.push(day)
+	}
+	return week;
+}
+
+commissionCashIn = (amount , data) => {
+	let val = amount * data.percents / 100;
+		if(val < data.max.amount){
+			return val;
+		}else{
+			return data.max.amount;
+		}
+}
+
+commissionCashOutNatural = (tmpUser , user , data) => {
+	if(tmpUser.remaining_limit > 0){
+		let newLimit = tmpUser.remaining_limit - user.operation.amount;
+		if(newLimit > 0){
+			tmpUser.remaining_limit = newLimit;
+			user.commission = 0;
+		}else{
+			// convert negative number to positive
+			user.commission = Math.abs(newLimit * data.percents / 100);
+			tmpUser.remaining_limit = 0;
+		}
+	}else{
+		user.commission = user.operation.amount * data.percents / 100;
+		tmpUser.remaining_limit = 0;
+	}
+	
+}
+
+commissionCashOutJuridical = (amount , data) => {
+	let val = amount * data.percents / 100;
+		return val;
 }
 
 
@@ -61,80 +103,66 @@ calculate = (users) => {
 		for(let x = 0; x<users.length;x++){
 			switch(users[x].type){
 				case 'cash_in':
-					commission = users[x].operation.amount * cashIn.percents / 100;
-					commission < cashIn.max.amount ? users[x].commission = commission : users[x].commission = cashIn.max.amount;
+					users[x].commission = commissionCashIn(users[x].operation.amount , cashIn);
 
 					break;
 				case 'cash_out':
 					if(users[x].user_type === 'natural'){
-						
 						if(arrayUser.length === 0){
-							let limit = cashOutNatural.week_limit.amount - users[x].operation.amount;
-							if(limit >= 0){
-								users[x].remaining_limit = cashOutNatural.week_limit.amount - users[x].operation.amount;
-								users[x].commission = 0;
-							}else{
-								users[x].remaining_limit = 0;
-								commission = (limit * cashOutNatural.percents / 100) * -1;
-								users[x].commission = commission;
-							}
 							arrayUser.push({
 								user : users[x].user_id,
-								week: getweek(users[x].date),
-								remaining_limit : users[x].remaining_limit
+								week: getWeek(users[x].date),
+								remaining_limit : cashOutNatural.week_limit.amount
 							})
-							
+					
+							commissionCashOutNatural(arrayUser[0]  , users[x]  , cashOutNatural);
+
 						}else{
 							for(var i=0;i<arrayUser.length;i++){
-								if(arrayUser[i].user !== users[x].user_id){
-									arrayUser.push({
-										user : users[x].user_id,
-										week: getweek(users[x].date),
-										remaining_limit : cashOutNatural.week_limit.amount
-									})
+								if(arrayUser[i].user === users[x].user_id){
+									
+									if(arrayUser[i].week.indexOf(users[x].date) === -1){
+										
+										// if date did not match 
+										arrayUser[i].week = getWeek(users[x].date);
+										arrayUser[i].remaining_limit = cashOutNatural.week_limit.amount;
 
-									let limit = cashOutNatural.week_limit.amount - users[x].operation.amount;
-									if(limit >= 0){
-										users[x].remaining_limit = cashOutNatural.week_limit.amount - users[x].operation.amount;
+										commissionCashOutNatural(arrayUser[i]  , users[x]  , cashOutNatural);
+
 									}else{
-										users[x].remaining_limit = 0;
+										
+										//if date match
+										commissionCashOutNatural(arrayUser[i]  , users[x]  , cashOutNatural);
 									}
-									users[x].remaining_limit = arrayUser[i].remaining_limit;
 								}
 								else{
-									if(arrayUser[i].week !== getweek(users[x].date)){
-	
-										//reset limit if new week
-										arrayUser.push({
-											user : users[x].user_id,
-											week: getweek(users[x].date),
-											remaining_limit : cashOutNatural.week_limit.amount 
-										})
-
-									}else{
-										let limit = arrayUser[i].remaining_limit - users[x].operation.amount;
-
-										if(limit >= 0){
-											users[x].commission = 0;
-											users[x].remaining_limit = cashOutNatural.week_limit.amount - users[x].operation.amount;
-										}else{
-											users[x].commission = users[x].operation.amount * cashOutNatural.percents / 100;
-											users[x].remaining_limit = 0;
+									// new user push 
+									var isfind = false
+									for(var j=0;j<arrayUser.length;j++){
+										if(arrayUser[j].user === users[x].user_id){
+											isfind = true;
 										}
 									}
+									if(!isfind){
+										arrayUser.push({
+											user : users[x].user_id,
+											week:  getWeek(users[x].date),
+											remaining_limit : cashOutNatural.week_limit.amount
+										})
+									}
+
 								}
 							}
 						}
-
 					}else{
 						// juridical cash out
-						commission = users[x].operation.amount * cashOutJuridical.percents / 100;
-						users[x].commission = commission;
+						users[x].commission = commissionCashOutJuridical(users[x].operation.amount , cashOutJuridical)	
 					}
-
 					break;
 			}
+			
 		}
+
 		evaluate(users)
 	}else{
 		setTimeout(function() {
