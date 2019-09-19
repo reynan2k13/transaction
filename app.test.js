@@ -1,55 +1,94 @@
-const api = require('./api.js')
+const api = require('./api.js');
+const app = require('./app.js')
 
-const testObject = {
-    "date": "2016-01-05", // operation date in format `Y-m-d`
-    "user_id": 1, // user id, integer
-    "user_type": "natural", // user type, one of “natural”(natural person) or “juridical”(legal person)
-    "type": "cash_in", // operation type, one of “cash_in” or “cash_out”
-    "operation": {
-        "amount": 200, // operation amount(for example `2.12` or `3`)
-        "currency": "EUR" // operation currency `EUR`
-    }
+
+fetchGetCashIn = (callback) => {
+  api.getCashIn( result => {
+    callback(result);
+    })
 }
 
-test('testObject.date', () => {
-  expect(testObject.date).toBe('2016-01-05');
+test('api.getCashIn', done => {
+  function callback(data) {
+    expect(data).not.toBeNull();
+    done();
+  }
+
+  fetchGetCashIn(callback);
 });
 
-test('testObject.user_id', () => {
-  expect(testObject.user_id).toBe(1);
+fetchGetCashOut = (callback) => {
+  api.getCashOut('natural' , result => {
+    callback(result);
+  })
+}
+
+test('api.getCashOut', done => {
+  function callback(data) {
+    expect(data).not.toBeNull();
+    done();
+  }
+
+  fetchGetCashOut(callback);
 });
 
-test('testObject.user_type', () => {
-  expect(testObject.user_type).toBe('natural');
+const testUser = [{ "date": "2016-01-05", "user_id": 1, "user_type": "natural", "type": "cash_in", "operation": { "amount": 200.00, "currency": "EUR" } }];
+test('test user data' , ()=>{
+    expect(testUser[0].date).toBe('2016-01-05');
+    expect(testUser[0].user_id).toBe(1);
+    expect(testUser[0].user_type).toBe('natural');
+    expect(testUser[0].type).toMatch(/cash_in/ ||  /cash_out/);
+    expect(testUser[0].operation.amount).toBeGreaterThan(0);
+    expect(testUser[0].operation.currency).toBe('EUR');
+
+
 });
 
-test('testObject.type', () => {
-  expect(testObject.type).toBe('cash_in');
+test('getWeek output', () => {
+  expect(app.getWeek(testUser[0].date)).toHaveLength(7);
 });
 
-test('testObject.operation.amount', () => {
-  expect(testObject.operation.amount).toBe(200);
+
+test('commissionCashIn ', () => {
+  const data = {
+      "percents": 0.03,
+      "max": {
+          "amount": 5,
+          "currency": "EUR"
+      }
+    }
+  expect(app.commissionCashIn(testUser[0].operation.amount , data)).toBeGreaterThanOrEqual(0);
 });
 
-test('testObject.operation.currency', () => {
-  expect(testObject.operation.currency).toBe('EUR');
+
+test('commissionCashOutJuridical ', () => {
+  const data = {
+      "percents": 0.3,
+      "min": {
+          "amount": 0.5,
+          "currency": "EUR"
+      }
+  }
+  expect(app.commissionCashOutJuridical(testUser[0].operation.amount , data)).toBeGreaterThanOrEqual(0);
 });
 
-describe('api.getCashIn', () => {
-	api.getCashIn( result => {
-		expect(result).toBe(result)
-	})
+
+
+test('commissionCashOutNatural ', () => {
+  const data = {
+      "percents": 0.3,
+      "week_limit": {
+          "amount": 1000,
+          "currency": "EUR"
+      }
+    }
+  expect(app.commissionCashOutJuridical(testUser[0].operation.amount , data)).toBeGreaterThanOrEqual(0);
 });
 
-describe('api.getCashOut', () => {
-	api.getCashOut('natural' , result => {
-		expect(result).toBe(result)
-	})
-});
 
-describe('api.getCashOut', () => {
-	api.getCashOut('juridical' ,result => {
-		expect(result).toBe(result)
-	})
-});
+
+
+
+
+
 

@@ -1,4 +1,3 @@
-
 const http = require('http');
 const port = 3000;
 const fs = require('fs');
@@ -137,8 +136,8 @@ calculate = (users) => {
 								}
 								else{
 									// new user push 
-									var isfind = false
-									for(var j=0;j<arrayUser.length;j++){
+									let isfind = false;
+									for(let j=0;j<arrayUser.length;j++){
 										if(arrayUser[j].user === users[x].user_id){
 											isfind = true;
 										}
@@ -158,7 +157,7 @@ calculate = (users) => {
 						// juridical cash out
 						users[x].commission = commissionCashOutJuridical(users[x].operation.amount , cashOutJuridical)	
 					}
-					break;
+				break;
 			}
 			
 		}
@@ -179,5 +178,7 @@ evaluate = (data) =>{
 	}
 }
 
+
+module.exports = { getWeek , commissionCashIn , commissionCashOutNatural , commissionCashOutJuridical , calculate , evaluate };
 
 
